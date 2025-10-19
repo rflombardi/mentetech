@@ -1,0 +1,7 @@
+project_id = "lublkrevruvdzhegjicb"
+
+[functions.auto-publish-posts]
+verify_jwt = true
+
+[functions.send-contact-email]
+verify_jwt = false

@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design System - Blog IA para PMEs
+Tech-focused color palette with AI/Innovation theme
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71% 4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+
+    /* AI-focused brand colors */
+    --primary: 231 48% 48%; /* Deep Blue #3D5AFE */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 231 48% 65%;
+
+    --secondary: 258 92% 65%; /* Purple #7C4DFF */
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 190 100% 50%; /* Cyan #00E5FF */
+    --accent-foreground: 224 71% 4%;
+
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 231 48% 48%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradient tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 50%, hsl(var(--accent)) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 14.3% 98%));
+    
+    /* Shadows with brand colors */
+    --shadow-primary: 0 10px 40px -10px hsl(var(--primary) / 0.4);
+    --shadow-card: 0 4px 16px -4px hsl(var(--primary) / 0.1);
+    --shadow-elevated: 0 20px 60px -10px hsl(var(--primary) / 0.2);
+
+    /* Typography scale */
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 0 0% 95%;
+
+    --card: 222 47% 14%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 222 47% 14%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 231 48% 65%;
+    --primary-foreground: 224 71% 4%;
+    --primary-glow: 231 48% 75%;
+
+    --secondary: 258 92% 75%;
+    --secondary-foreground: 224 71% 4%;
+
+    --accent: 190 100% 60%;
+    --accent-foreground: 224 71% 4%;
+
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 231 48% 65%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 50%, hsl(var(--accent)) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(215 27.9% 16.9%), hsl(224 71% 4%));
+    
+    --shadow-primary: 0 10px 40px -10px hsl(var(--primary) / 0.6);
+    --shadow-card: 0 4px 16px -4px hsl(var(--primary) / 0.2);
+    --shadow-elevated: 0 20px 60px -10px hsl(var(--primary) / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Typography improvements for blog readability */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold leading-tight tracking-tight;
+  }
+
+  h1 { @apply text-4xl lg:text-5xl; }
+  h2 { @apply text-3xl lg:text-4xl; }
+  h3 { @apply text-2xl lg:text-3xl; }
+  h4 { @apply text-xl lg:text-2xl; }
+
+  /* Blog content styling */
+  .blog-content {
+    @apply max-w-none text-foreground;
+  }
+
+  .blog-content h1, .blog-content h2, .blog-content h3, .blog-content h4 {
+    @apply font-semibold leading-tight tracking-tight mt-8 mb-4;
+  }
+
+  .blog-content h2 {
+    @apply text-primary border-b border-border pb-2 mb-4 text-2xl;
+  }
+
+  .blog-content h3 {
+    @apply text-xl;
+  }
+
+  .blog-content h4 {
+    @apply text-lg;
+  }
+
+  .blog-content p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  .blog-content ul, .blog-content ol {
+    @apply space-y-2 mb-4 pl-6;
+  }
+
+  .blog-content li {
+    @apply relative;
+  }
+
+  .blog-content ul li::before {
+    content: '';
+    @apply absolute -left-4 top-3 w-2 h-2 bg-primary rounded-full;
+  }
+
+  .blog-content strong {
+    @apply font-semibold text-foreground;
+  }
+
+  .blog-content a {
+    @apply text-primary hover:underline;
+  }
+
+  .blog-content blockquote {
+    @apply border-l-4 border-primary pl-4 italic text-muted-foreground my-4;
+  }
+
+  /* Inline images in content */
+  .blog-content .inline-image-container {
+    @apply my-8 text-center;
+  }
+
+  .blog-content .inline-image-container img {
+    @apply w-full max-w-4xl mx-auto rounded-xl shadow-card border border-border/50 
+           transition-all duration-300 hover:shadow-elevated;
+  }
+
+  .blog-content .inline-image-container figcaption {
+    @apply text-center text-sm text-muted-foreground mt-4 italic max-w-2xl mx-auto leading-relaxed;
+  }
+
+  /* Editor preview styles */
+  .inline-image-container {
+    @apply my-6 text-center;
+  }
+
+  .inline-image-container img {
+    @apply w-full max-w-2xl mx-auto rounded-lg shadow-card border border-border;
+  }
+
+  .inline-image-container figcaption {
+    @apply text-center text-sm text-muted-foreground mt-3 italic;
+  }
+}
+
+@layer components {
+  /* Card hover animations */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-elevated hover:-translate-y-1;
+  }
+
+  /* Gradient text effect */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  }
+
+  /* Custom button variants */
+  .btn-hero {
+    @apply bg-gradient-to-r from-primary to-secondary text-white px-8 py-4 rounded-lg font-semibold 
+           shadow-primary hover:shadow-elevated transform hover:-translate-y-0.5 transition-all duration-300;
+  }
+
+  .btn-outline-glow {
+    @apply border-2 border-primary/30 text-primary hover:bg-primary hover:text-white 
+           hover:shadow-primary transition-all duration-300 backdrop-blur-sm;
+  }
+
+  /* Rich text editor enhancements */
+  .editor-toolbar {
+    @apply bg-background border border-border/50 shadow-sm;
+  }
+
+  .editor-toolbar-button {
+    @apply hover:bg-primary/10 hover:text-primary transition-all duration-200 
+           active:scale-95 active:bg-primary/20;
+  }
+
+  .editor-preview {
+    @apply bg-muted/30 backdrop-blur-sm;
+  }
+}
