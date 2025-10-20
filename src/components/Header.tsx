@@ -83,11 +83,11 @@ const Header = () => {
                             <Link
                               key={categoria.id}
                               to={`/categoria/${categoria.slug}`}
-                              className="block p-3 rounded-md hover:bg-accent transition-colors duration-200"
+                              className="group block p-3 rounded-md hover:bg-accent transition-colors duration-200"
                             >
                               <div className="font-medium text-foreground">{categoria.nome}</div>
                               {categoria.descricao && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                <p className="text-sm text-muted-foreground group-hover:text-foreground mt-1 line-clamp-2 transition-colors">
                                   {categoria.descricao}
                                 </p>
                               )}
