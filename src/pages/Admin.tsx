@@ -1,26 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, FileText, Settings, Home, LogOut } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostsList } from "@/components/admin/PostsList";
 import { PostForm } from "@/components/admin/PostForm";
 import SEOHead from "@/components/SEOHead";
-import { AuthRequired } from "@/components/admin/AuthRequired";
 import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Admin() {
-  const { user, isAdmin, isLoading, signOut } = useAuth();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    // Redirect to auth page if not logged in
-    if (!isLoading && !user) {
-      navigate("/auth");
-    }
-  }, [user, isLoading, navigate]);
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("posts");
   const [editingPost, setEditingPost] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -42,32 +32,6 @@ export default function Admin() {
     setEditingPost(null);
     setActiveTab("posts");
   };
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <>
-        <SEOHead 
-          metadata={{
-            title: "Painel Administrativo - Blog IA para PMEs",
-            description: "Gerencie posts do blog sobre Inteligência Artificial para pequenas e médias empresas brasileiras",
-            canonical: "/admin"
-          }}
-        />
-        <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center">
-          <div className="space-y-4">
-            <Skeleton className="h-12 w-64" />
-            <Skeleton className="h-8 w-96" />
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Show auth required screen if not authenticated or not admin
-  if (!user || !isAdmin) {
-    return <AuthRequired />;
-  }
 
   return (
     <>

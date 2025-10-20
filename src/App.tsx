@@ -16,6 +16,7 @@ import { NewsletterModal } from "@/components/NewsletterModal";
 import { useNewsletter } from "@/contexts/NewsletterContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/admin/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -30,7 +31,9 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Home />} />
     <Route path="/auth" element={<Auth />} />
-    <Route path="/admin" element={<Admin />} />
+    <Route element={<ProtectedRoute />}>
+      <Route path="/admin" element={<Admin />} />
+    </Route>
     <Route path="/post/:slug" element={<PostPage />} />
     <Route path="/categoria/:slug" element={<CategoryPage />} />
     <Route path="/sobre" element={<About />} />
