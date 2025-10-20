@@ -3,8 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useNewsletter } from "@/contexts/NewsletterContext";
 import logoMenteTech from "@/assets/logo-mente-tech-new.png";
+import { Categoria } from "@/types/blog";
 
-const Footer = () => {
+interface FooterProps {
+  categorias: Categoria[];
+}
+
+const Footer = ({ categorias }: FooterProps) => {
   const currentYear = new Date().getFullYear();
   const { openModal } = useNewsletter();
 
@@ -52,38 +57,16 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">Categorias</h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link 
-                  to="/categoria/automacao-processos" 
-                  className="text-white/80 hover:text-white transition-colors duration-200"
-                >
-                  Automação de Processos
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/categoria/atendimento-cliente" 
-                  className="text-white/80 hover:text-white transition-colors duration-200"
-                >
-                  Atendimento ao Cliente
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/categoria/analise-dados" 
-                  className="text-white/80 hover:text-white transition-colors duration-200"
-                >
-                  Análise de Dados
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/categoria/marketing-digital" 
-                  className="text-white/80 hover:text-white transition-colors duration-200"
-                >
-                  Marketing Digital
-                </Link>
-              </li>
+              {categorias.slice(0, 4).map((categoria) => (
+                <li key={categoria.id}>
+                  <Link 
+                    to={`/categoria/${categoria.slug}`}
+                    className="text-white/80 hover:text-white transition-colors duration-200"
+                  >
+                    {categoria.nome}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

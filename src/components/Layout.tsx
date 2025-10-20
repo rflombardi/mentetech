@@ -37,7 +37,7 @@ const Layout = ({ children, showSidebar = true }: LayoutProps) => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header categorias={categorias || []} />
       
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
@@ -64,7 +64,7 @@ const Layout = ({ children, showSidebar = true }: LayoutProps) => {
         </div>
       </main>
       
-      <Footer />
+      <Footer categorias={categorias || []} />
     </div>
   );
 };

@@ -1,13 +1,12 @@
-import { Search, Menu, X, Settings, ChevronDown } from "lucide-react";
+import { Search, Menu, X, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useNewsletter } from "@/contexts/NewsletterContext";
 import logoMenteTech from "@/assets/logo-mente-tech-new.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Categoria } from "@/types/blog";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -17,31 +16,14 @@ import {
   NavigationMenuViewport,
 } from "@/components/ui/navigation-menu";
 
-const Header = () => {
+interface HeaderProps {
+  categorias: Categoria[];
+}
+
+const Header = ({ categorias }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { openModal } = useNewsletter();
-  
-  // Safe router hook usage with error handling
-  let location;
-  try {
-    location = useLocation();
-  } catch {
-    location = { pathname: "/" };
-  }
-
-  // Fetch categories from Supabase
-  const { data: categorias } = useQuery({
-    queryKey: ['categorias'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categorias')
-        .select('*')
-        .order('nome');
-      if (error) throw error;
-      return data;
-    }
-  });
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm transition-colors duration-300">
@@ -192,13 +174,16 @@ const Header = () => {
                 >
                   Início
                 </Link>
-                <Link 
-                  to="/categorias" 
-                  className="text-foreground hover:text-primary transition-colors duration-200 font-medium py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Categorias
-                </Link>
+                {categorias.map((categoria) => (
+                  <Link
+                    key={categoria.id}
+                    to={`/categoria/${categoria.slug}`}
+                    className="text-foreground hover:text-primary transition-colors duration-200 font-medium py-2 pl-4"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {categoria.nome}
+                  </Link>
+                ))}
                 <Link 
                   to="/sobre" 
                   className="text-foreground hover:text-primary transition-colors duration-200 font-medium py-2"
