@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Edit3, Trash2, Search, Calendar, Clock, Star } from "lucide-react";
+import { Edit3, Trash2, Search, Calendar, Clock } from "lucide-react";
 import { StatusBadge, statusConfig } from "@/components/admin/StatusSelector";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -220,8 +220,7 @@ export function PostsList({ posts, isLoading, onEditPost }: PostsListProps) {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      {post.is_featured && <Star className="h-5 w-5 text-yellow-500" />}
+                    <div className="flex items-start gap-2">
                       <CardTitle className="text-xl flex-1">{post.titulo}</CardTitle>
                       {isScheduledOverdue(post) && (
                         <Badge variant="destructive" className="ml-2">

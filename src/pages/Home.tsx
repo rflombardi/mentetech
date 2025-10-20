@@ -39,23 +39,7 @@ const Home = () => {
     }
   });
 
-  // Fetch featured post
-  const { data: featuredPostData, isLoading: featuredLoading } = useQuery({
-    queryKey: ['posts', 'featured'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*, categorias(nome, slug, cor)')
-        .eq('is_featured', true)
-        .eq('status', 'PUBLICADO')
-        .limit(1)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error; // Ignore 'no rows' error
-      return data as Post | null;
-    }
-  });
-
-  const featuredPost = featuredPostData ?? (posts && posts.length > 0 ? posts[0] : null);
+  const featuredPost = posts && posts.length > 0 ? posts[0] : null;
   const latestPosts = posts?.filter(p => p.id !== featuredPost?.id) || [];
 
   // Filter posts based on search and category
@@ -158,7 +142,7 @@ const Home = () => {
           <TrendingUp className="h-5 w-5 text-primary" />
           <h2 className="text-2xl font-bold">Artigo em Destaque</h2>
         </div>
-        {featuredLoading || postsLoading ? (
+        {postsLoading ? (
           <Skeleton className="h-[400px] w-full rounded-lg" />
         ) : featuredPost ? (
           <PostCard post={featuredPost} categoria={featuredPost.categorias} variant="featured" />

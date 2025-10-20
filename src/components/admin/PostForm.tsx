@@ -13,12 +13,11 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { ContentPreview } from "@/components/admin/ContentPreview";
-import { Save, X, Plus, Star } from "lucide-react";
+import { Save, X, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { StatusSelector } from "@/components/admin/StatusSelector";
@@ -35,7 +34,6 @@ const postSchema = z.object({
   imagem_url: z.string().optional(),
   status: z.enum(['RASCUNHO', 'PUBLICADO', 'AGENDADO'] as const),
   data_publicacao_agendada: z.date().optional().nullable(),
-  is_featured: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.status === 'PUBLICADO' || data.status === 'AGENDADO') {
     if (!data.resumo || data.resumo.trim().length < 10) {
@@ -89,7 +87,6 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
     status: "RASCUNHO" as PostStatus,
     data_publicacao_agendada: undefined,
     slug: "",
-    is_featured: false,
   });
   const [newTag, setNewTag] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -140,7 +137,6 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
         status: post.status || "RASCUNHO",
         data_publicacao_agendada: post.data_publicacao_agendada ? new Date(post.data_publicacao_agendada) : undefined,
         slug: post.slug,
-        is_featured: post.is_featured || false,
       });
     }
   }, [post]);
@@ -182,7 +178,6 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
         slug: data.slug,
         data_publicacao: data.status === 'PUBLICADO' && !post?.data_publicacao ? new Date().toISOString() : post?.data_publicacao,
         publicado: data.status === 'PUBLICADO',
-        is_featured: data.is_featured,
       };
 
       if (postId) {
@@ -202,7 +197,6 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
       toast({
         title: postId ? "Post atualizado" : "Post criado",
         description: postId 
@@ -418,35 +412,18 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
           )}
 
           {/* Status and Publication */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Status do Post *</Label>
-              <StatusSelector
-                value={formData.status || "RASCUNHO"}
-                onChange={(status) => setFormData(prev => ({ 
-                  ...prev, 
-                  status,
-                  data_publicacao_agendada: status !== 'AGENDADO' ? undefined : prev.data_publicacao_agendada
-                }))}
-                className={errors.status ? "border-destructive" : ""}
-              />
-              {errors.status && <p className="text-sm text-destructive">{errors.status}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Artigo em Destaque</Label>
-              <div className="flex items-center space-x-2 pt-2">
-                <Switch
-                  id="is_featured"
-                  checked={formData.is_featured}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
-                />
-                <Label htmlFor="is_featured" className="flex items-center gap-2">
-                  <Star className="h-4 w-4 text-yellow-500" />
-                  <span>Destacar este post na página inicial</span>
-                </Label>
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label>Status do Post *</Label>
+            <StatusSelector
+              value={formData.status || "RASCUNHO"}
+              onChange={(status) => setFormData(prev => ({ 
+                ...prev, 
+                status,
+                data_publicacao_agendada: status !== 'AGENDADO' ? undefined : prev.data_publicacao_agendada
+              }))}
+              className={errors.status ? "border-destructive" : ""}
+            />
+            {errors.status && <p className="text-sm text-destructive">{errors.status}</p>}
           </div>
 
           {formData.status === 'AGENDADO' && (
