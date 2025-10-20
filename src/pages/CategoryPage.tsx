@@ -14,12 +14,13 @@ const CategoryPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   
-  // Refatorado para uma única query mais robusta
+  // Query para buscar posts e a categoria associada
   const { data: posts, isLoading, isError } = useQuery({
     queryKey: ['posts', 'category', slug],
     queryFn: async () => {
       if (!slug) return null;
 
+      // Usamos a sintaxe de foreign key para filtrar pelo slug da categoria
       const { data, error } = await supabase
         .from('posts')
         .select('*, categorias!inner(id, nome, slug, descricao, cor)')
@@ -34,7 +35,10 @@ const CategoryPage = () => {
     enabled: !!slug,
   });
 
-  const categoria = posts && posts.length > 0 ? posts[0].categorias : null;
+  // Extrai a categoria do primeiro post (se houver)
+  const categoria: Categoria | undefined = posts && posts.length > 0 && posts[0].categorias
+    ? (posts[0].categorias as Categoria)
+    : undefined;
 
   if (isLoading) {
     return (

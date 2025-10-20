@@ -6,7 +6,7 @@ import PostCard from "@/components/PostCard";
 import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, TrendingUp, Zap, Target, Users } from "lucide-react";
+import { Search, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import heroImage from "@/assets/hero-ai-pme.jpg";
 import type { Post, Categoria } from "@/types/blog";
@@ -21,7 +21,7 @@ const Home = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('posts')
-        .select('*, categorias(nome, slug, cor)')
+        .select('*, categorias(id, nome, slug, cor)') // Selecionando campos específicos da categoria
         .eq('status', 'PUBLICADO')
         .order('data_publicacao', { ascending: false });
       if (error) throw error;
@@ -48,8 +48,9 @@ const Home = () => {
       const matchesSearch = searchQuery === "" || 
         post.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.resumo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+        (post.tags && post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())));
       
+      // Correção: Comparar o ID da categoria do post com o ID da categoria selecionada
       const matchesCategory = selectedCategory === null || post.categoria_id === selectedCategory;
       
       return matchesSearch && matchesCategory;
@@ -100,7 +101,7 @@ const Home = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 type="text"
-                placeholder="Buscar por título, conteúdo ou tags..."
+                placeholder="Buscar artigos sobre IA..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
