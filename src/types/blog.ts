@@ -18,6 +18,7 @@ export interface Post {
   created_at?: string;
   updated_at?: string;
   visualizacoes?: number;
+  categorias?: Categoria; // Adicionando a propriedade para dados da categoria
 }
 
 export interface Categoria {

@@ -14,34 +14,27 @@ const CategoryPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   
-  // Fetch category and its posts
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['category', slug],
+  // Refatorado para uma única query mais robusta
+  const { data: posts, isLoading, isError } = useQuery({
+    queryKey: ['posts', 'category', slug],
     queryFn: async () => {
       if (!slug) return null;
 
-      // Fetch category details
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('categorias')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-      
-      if (categoryError) throw categoryError;
-
-      // Fetch posts for this category
-      const { data: postsData, error: postsError } = await supabase
+      const { data, error } = await supabase
         .from('posts')
-        .select('*, categorias(nome, slug, cor)')
-        .eq('categoria_id', categoryData.id)
+        .select('*, categorias!inner(id, nome, slug, descricao, cor)')
+        .eq('categorias.slug', slug)
         .eq('status', 'PUBLICADO')
         .order('data_publicacao', { ascending: false });
 
-      if (postsError) throw postsError;
-
-      return { categoria: categoryData as Categoria, posts: postsData as Post[] };
-    }
+      if (error) throw error;
+      
+      return data as Post[];
+    },
+    enabled: !!slug,
   });
+
+  const categoria = posts && posts.length > 0 ? posts[0].categorias : null;
 
   if (isLoading) {
     return (
@@ -56,19 +49,17 @@ const CategoryPage = () => {
     );
   }
 
-  if (isError || !data) {
+  if (isError || !categoria) {
     return (
       <Layout>
         <div className="text-center py-16">
           <h1 className="text-2xl font-bold mb-4">Categoria não encontrada</h1>
-          <p className="text-muted-foreground mb-6">A categoria que você está procurando não existe.</p>
+          <p className="text-muted-foreground mb-6">A categoria que você está procurando não existe ou não tem posts publicados.</p>
           <Button onClick={() => navigate("/")}>Voltar ao Início</Button>
         </div>
       </Layout>
     );
   }
-
-  const { categoria, posts: categoryPosts } = data;
 
   return (
     <Layout>
@@ -98,10 +89,10 @@ const CategoryPage = () => {
           )}
         </header>
 
-        {categoryPosts.length > 0 ? (
+        {posts && posts.length > 0 ? (
           <section>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {categoryPosts.map((post) => (
+              {posts.map((post) => (
                 <PostCard key={post.id} post={post} categoria={post.categorias} />
               ))}
             </div>
