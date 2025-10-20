@@ -23,18 +23,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const checkAdminRole = async (): Promise<boolean> => {
-    if (!session?.user?.id) {
-      console.log('❌ Nenhum usuário logado');
+  // Função interna para realizar a verificação de admin de forma segura
+  const performAdminCheck = async (currentSession: Session | null): Promise<boolean> => {
+    if (!currentSession?.user?.id) {
+      console.log('❌ Nenhum usuário logado para verificação de admin');
       return false;
     }
 
-    console.log('✅ Usuário logado:', session.user.email);
-    console.log('🔍 Verificando role de admin para user_id:', session.user.id);
+    console.log('✅ Usuário logado:', currentSession.user.email);
+    console.log('🔍 Verificando role de admin para user_id:', currentSession.user.id);
 
     try {
       const { data, error } = await supabase.rpc('has_role', {
-        _user_id: session.user.id,
+        _user_id: currentSession.user.id,
         _role: 'admin'
       });
 
@@ -47,47 +48,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log(data ? '✅ Usuário É admin' : '❌ Usuário NÃO é admin');
       return !!data;
     } catch (error) {
-      console.error('❌ Erro ao verificar role de admin:', error);
+      console.error('❌ Exceção ao verificar role de admin:', error);
       return false;
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer admin role check with setTimeout to prevent deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            checkAdminRole().then(setIsAdmin);
-          }, 0);
-        } else {
-          setIsAdmin(false);
-        }
-        
-        setIsLoading(false);
-      }
-    );
+    setIsLoading(true);
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        setTimeout(() => {
-          checkAdminRole().then(setIsAdmin);
-        }, 0);
-      }
-      
+    // Verifica a sessão inicial ao carregar a aplicação
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      const isAdminStatus = await performAdminCheck(initialSession);
+      setIsAdmin(isAdminStatus);
       setIsLoading(false);
     });
 
+    // Ouve por mudanças no estado de autenticação (login, logout, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        const isAdminStatus = await performAdminCheck(newSession);
+        setIsAdmin(isAdminStatus);
+      }
+    );
+
     return () => subscription.unsubscribe();
   }, []);
+
+  // Função exposta para re-verificar manualmente a permissão (usado no botão "Tentar Novamente")
+  const checkAdminRole = async (): Promise<boolean> => {
+    const isAdminStatus = await performAdminCheck(session);
+    setIsAdmin(isAdminStatus);
+    return isAdminStatus;
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
