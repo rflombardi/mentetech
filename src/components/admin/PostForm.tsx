@@ -27,23 +27,46 @@ import type { Post, Categoria, PostStatus } from "@/types/blog";
 
 const postSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório").max(200, "Título muito longo"),
-  resumo: z.string().min(1, "Resumo é obrigatório").max(500, "Resumo muito longo"),
-  conteudo_html: z.string().min(1, "Conteúdo é obrigatório"),
-  categoria_id: z.string().uuid("Selecione uma categoria"),
+  slug: z.string().min(1, "Slug é obrigatório"),
+  resumo: z.string().max(500, "Resumo muito longo").optional(),
+  conteudo_html: z.string().optional(),
+  categoria_id: z.string().uuid("Selecione uma categoria").optional().nullable(),
   tags: z.array(z.string()).max(10, "Máximo 10 tags"),
   capa_url: z.string().optional(),
   status: z.enum(['RASCUNHO', 'PUBLICADO', 'AGENDADO'] as const),
-  data_publicacao_agendada: z.date().optional(),
-  slug: z.string().min(1, "Slug é obrigatório"),
-}).refine((data) => {
-  // If status is AGENDADO, data_publicacao_agendada is required
-  if (data.status === 'AGENDADO' && !data.data_publicacao_agendada) {
-    return false;
+  data_publicacao_agendada: z.date().optional().nullable(),
+}).superRefine((data, ctx) => {
+  if (data.status === 'PUBLICADO' || data.status === 'AGENDADO') {
+    if (!data.resumo || data.resumo.trim().length < 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Resumo é obrigatório (mínimo 10 caracteres) para publicar ou agendar.",
+        path: ["resumo"],
+      });
+    }
+    if (!data.conteudo_html || data.conteudo_html.trim().length < 20) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Conteúdo é obrigatório (mínimo 20 caracteres) para publicar ou agendar.",
+        path: ["conteudo_html"],
+      });
+    }
+    if (!data.categoria_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Categoria é obrigatória para publicar ou agendar.",
+        path: ["categoria_id"],
+      });
+    }
   }
-  return true;
-}, {
-  message: "Data de publicação é obrigatória para posts agendados",
-  path: ["data_publicacao_agendada"],
+
+  if (data.status === 'AGENDADO' && !data.data_publicacao_agendada) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Data de publicação é obrigatória para posts agendados.",
+      path: ["data_publicacao_agendada"],
+    });
+  }
 });
 
 type PostFormData = z.infer<typeof postSchema>;
@@ -59,7 +82,7 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
     titulo: "",
     resumo: "",
     conteudo_html: "",
-    categoria_id: "",
+    categoria_id: undefined,
     tags: [],
     capa_url: "",
     status: "RASCUNHO" as PostStatus,
@@ -109,7 +132,7 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
         titulo: post.titulo,
         resumo: post.resumo,
         conteudo_html: post.conteudo_html,
-        categoria_id: post.categoria_id || "",
+        categoria_id: post.categoria_id || undefined,
         tags: post.tags || [],
         capa_url: post.imagem_url || "",
         status: post.status || "RASCUNHO",
@@ -146,17 +169,15 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
     mutationFn: async (data: PostFormData) => {
       const payload = {
         titulo: data.titulo,
-        resumo: data.resumo,
-        conteudo_html: data.conteudo_html,
-        categoria_id: data.categoria_id,
+        resumo: data.resumo || "",
+        conteudo_html: data.conteudo_html || "",
+        categoria_id: data.categoria_id || null,
         tags: data.tags,
         imagem_url: data.capa_url || null,
         status: data.status,
         data_publicacao_agendada: data.data_publicacao_agendada ? data.data_publicacao_agendada.toISOString() : null,
         slug: data.slug,
-        // Set data_publicacao only if publishing immediately
-        data_publicacao: data.status === 'PUBLICADO' ? new Date().toISOString() : null,
-        // Keep legacy publicado field for compatibility
+        data_publicacao: data.status === 'PUBLICADO' && !post?.data_publicacao ? new Date().toISOString() : post?.data_publicacao,
         publicado: data.status === 'PUBLICADO',
       };
 
@@ -211,6 +232,11 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
           }
         });
         setErrors(newErrors);
+        toast({
+          title: "Erro de Validação",
+          description: "Por favor, corrija os campos destacados para continuar.",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -294,7 +320,7 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
 
           {/* Resume */}
           <div className="space-y-2">
-            <Label htmlFor="resumo">Resumo *</Label>
+            <Label htmlFor="resumo">Resumo {formData.status !== 'RASCUNHO' && '*'}</Label>
             <Textarea
               id="resumo"
               value={formData.resumo}
@@ -308,9 +334,9 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
 
           {/* Category */}
           <div className="space-y-2">
-            <Label>Categoria *</Label>
+            <Label>Categoria {formData.status !== 'RASCUNHO' && '*'}</Label>
             <Select
-              value={formData.categoria_id}
+              value={formData.categoria_id || ""}
               onValueChange={(value) => setFormData(prev => ({ ...prev, categoria_id: value }))}
             >
               <SelectTrigger className={errors.categoria_id ? "border-destructive" : ""}>
@@ -371,7 +397,7 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
 
           {/* Content */}
           <div className="space-y-2">
-            <Label>Conteúdo *</Label>
+            <Label>Conteúdo {formData.status !== 'RASCUNHO' && '*'}</Label>
             <RichTextEditor
               value={formData.conteudo_html || ""}
               onChange={(content) => setFormData(prev => ({ ...prev, conteudo_html: content }))}
