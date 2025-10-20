@@ -21,6 +21,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Edit3, Trash2, Search, Calendar, Clock } from "lucide-react";
 import { StatusBadge, statusConfig } from "@/components/admin/StatusSelector";
