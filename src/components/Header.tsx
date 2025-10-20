@@ -85,9 +85,9 @@ const Header = () => {
                               to={`/categoria/${categoria.slug}`}
                               className="group block p-3 rounded-md hover:bg-accent transition-colors duration-200"
                             >
-                              <div className="font-medium text-foreground group-hover:text-white transition-colors">{categoria.nome}</div>
+                              <div className="font-medium text-foreground group-hover:text-accent-foreground transition-colors">{categoria.nome}</div>
                               {categoria.descricao && (
-                                <p className="text-sm text-muted-foreground group-hover:!text-foreground mt-1 line-clamp-2 transition-colors">
+                                <p className="text-sm text-muted-foreground group-hover:text-accent-foreground mt-1 line-clamp-2 transition-colors">
                                   {categoria.descricao}
                                 </p>
                               )}
