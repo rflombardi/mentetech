@@ -14,6 +14,7 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
   NavigationMenuTrigger,
+  NavigationMenuViewport,
 } from "@/components/ui/navigation-menu";
 
 const Header = () => {
@@ -102,6 +103,7 @@ const Header = () => {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
               </NavigationMenuList>
+              <NavigationMenuViewport />
             </NavigationMenu>
             
             <Link 
