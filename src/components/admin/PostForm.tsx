@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ImageUpload } from "@/components/admin/ImageUpload";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { ContentPreview } from "@/components/admin/ContentPreview";
-import { Save, X, Plus } from "lucide-react";
+import { Save, X, Plus, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { StatusSelector } from "@/components/admin/StatusSelector";
@@ -32,9 +32,10 @@ const postSchema = z.object({
   conteudo_html: z.string().optional(),
   categoria_id: z.string().uuid("Selecione uma categoria").optional().nullable(),
   tags: z.array(z.string()).max(10, "Máximo 10 tags"),
-  capa_url: z.string().optional(),
+  imagem_url: z.string().optional(),
   status: z.enum(['RASCUNHO', 'PUBLICADO', 'AGENDADO'] as const),
   data_publicacao_agendada: z.date().optional().nullable(),
+  is_featured: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if (data.status === 'PUBLICADO' || data.status === 'AGENDADO') {
     if (!data.resumo || data.resumo.trim().length < 10) {
@@ -84,10 +85,11 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
     conteudo_html: "",
     categoria_id: undefined,
     tags: [],
-    capa_url: "",
+    imagem_url: "",
     status: "RASCUNHO" as PostStatus,
     data_publicacao_agendada: undefined,
     slug: "",
+    is_featured: false,
   });
   const [newTag, setNewTag] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -134,10 +136,11 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
         conteudo_html: post.conteudo_html,
         categoria_id: post.categoria_id || undefined,
         tags: post.tags || [],
-        capa_url: post.imagem_url || "",
+        imagem_url: post.imagem_url || "",
         status: post.status || "RASCUNHO",
         data_publicacao_agendada: post.data_publicacao_agendada ? new Date(post.data_publicacao_agendada) : undefined,
         slug: post.slug,
+        is_featured: post.is_featured || false,
       });
     }
   }, [post]);
@@ -173,12 +176,13 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
         conteudo_html: data.conteudo_html || "",
         categoria_id: data.categoria_id || null,
         tags: data.tags,
-        imagem_url: data.capa_url || null,
+        imagem_url: data.imagem_url || null,
         status: data.status,
         data_publicacao_agendada: data.data_publicacao_agendada ? data.data_publicacao_agendada.toISOString() : null,
         slug: data.slug,
         data_publicacao: data.status === 'PUBLICADO' && !post?.data_publicacao ? new Date().toISOString() : post?.data_publicacao,
         publicado: data.status === 'PUBLICADO',
+        is_featured: data.is_featured,
       };
 
       if (postId) {
@@ -291,7 +295,7 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="titulo">Título *</Label>
@@ -390,8 +394,8 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
           <div className="space-y-2">
             <Label>Imagem de Capa</Label>
             <ImageUpload
-              currentImage={formData.capa_url}
-              onImageUploaded={(url) => setFormData(prev => ({ ...prev, capa_url: url }))}
+              currentImage={formData.imagem_url}
+              onImageUploaded={(url) => setFormData(prev => ({ ...prev, imagem_url: url }))}
             />
           </div>
 
@@ -414,7 +418,7 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
           )}
 
           {/* Status and Publication */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label>Status do Post *</Label>
               <StatusSelector
@@ -422,7 +426,6 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
                 onChange={(status) => setFormData(prev => ({ 
                   ...prev, 
                   status,
-                  // Clear scheduled date if not scheduling
                   data_publicacao_agendada: status !== 'AGENDADO' ? undefined : prev.data_publicacao_agendada
                 }))}
                 className={errors.status ? "border-destructive" : ""}
@@ -430,32 +433,45 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
               {errors.status && <p className="text-sm text-destructive">{errors.status}</p>}
             </div>
 
-            {/* Show date picker only for scheduled posts */}
-            {formData.status === 'AGENDADO' && (
-              <div className="space-y-2">
-                <Label>Data e Hora de Publicação *</Label>
-                <DateTimePicker
-                  value={formData.data_publicacao_agendada}
-                  onChange={(date) => setFormData(prev => ({ ...prev, data_publicacao_agendada: date }))}
-                  placeholder="Agendar publicação..."
+            <div className="space-y-2">
+              <Label>Artigo em Destaque</Label>
+              <div className="flex items-center space-x-2 pt-2">
+                <Switch
+                  id="is_featured"
+                  checked={formData.is_featured}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_featured: checked }))}
                 />
-                {errors.data_publicacao_agendada && (
-                  <p className="text-sm text-destructive">{errors.data_publicacao_agendada}</p>
-                )}
+                <Label htmlFor="is_featured" className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span>Destacar este post na página inicial</span>
+                </Label>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Status-specific help text */}
+          {formData.status === 'AGENDADO' && (
+            <div className="space-y-2">
+              <Label>Data e Hora de Publicação *</Label>
+              <DateTimePicker
+                value={formData.data_publicacao_agendada}
+                onChange={(date) => setFormData(prev => ({ ...prev, data_publicacao_agendada: date }))}
+                placeholder="Agendar publicação..."
+              />
+              {errors.data_publicacao_agendada && (
+                <p className="text-sm text-destructive">{errors.data_publicacao_agendada}</p>
+              )}
+            </div>
+          )}
+
           <div className="p-3 bg-muted/50 rounded-lg text-sm">
             {formData.status === 'RASCUNHO' && (
               <p className="text-muted-foreground">
-                📝 <strong>Rascunho:</strong> O post será salvo mas não aparecerá no blog público. Você pode editá-lo e publicá-lo posteriormente.
+                📝 <strong>Rascunho:</strong> O post será salvo mas não aparecerá no blog público.
               </p>
             )}
             {formData.status === 'PUBLICADO' && (
               <p className="text-green-700 dark:text-green-400">
-                ✅ <strong>Publicado:</strong> O post será publicado imediatamente e ficará visível no blog.
+                ✅ <strong>Publicado:</strong> O post ficará visível no blog.
               </p>
             )}
             {formData.status === 'AGENDADO' && (
@@ -467,7 +483,6 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
         </CardContent>
       </Card>
 
-      {/* Action buttons */}
       <div className="flex justify-end gap-4">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar

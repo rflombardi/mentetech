@@ -18,6 +18,7 @@ export interface Post {
   created_at?: string;
   updated_at?: string;
   visualizacoes?: number;
+  is_featured?: boolean;
 }
 
 export interface Categoria {

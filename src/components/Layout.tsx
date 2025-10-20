@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "./Header";
 import Footer from "./Footer";
 import Sidebar from "./Sidebar";
-import { categorias, posts } from "@/data/mockData";
+import type { Post, Categoria } from "@/types/blog";
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,9 +12,28 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, showSidebar = true }: LayoutProps) => {
-  // Get recent and popular posts for sidebar
-  const postsRecentes = posts.slice(0, 3);
-  const postsPopulares = posts.slice(0, 3); // Mock popular posts
+  const { data: categorias } = useQuery({
+    queryKey: ['categorias'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categorias').select('*').order('nome');
+      if (error) throw error;
+      return data as Categoria[];
+    }
+  });
+
+  const { data: postsRecentes } = useQuery({
+    queryKey: ['posts', 'recentes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('status', 'PUBLICADO')
+        .order('data_publicacao', { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return data as Post[];
+    }
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -28,15 +49,15 @@ const Layout = ({ children, showSidebar = true }: LayoutProps) => {
               <div className="lg:col-span-1">
                 <div className="sticky top-24">
                   <Sidebar 
-                    categorias={categorias}
-                    postsRecentes={postsRecentes}
-                    postsPopulares={postsPopulares}
+                    categorias={categorias || []}
+                    postsRecentes={postsRecentes || []}
+                    postsPopulares={postsRecentes || []} // Usando recentes como populares por enquanto
                   />
                 </div>
               </div>
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto">
+            <div>
               {children}
             </div>
           )}

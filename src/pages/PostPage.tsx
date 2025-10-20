@@ -1,4 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Clock, Calendar, Tag, Share2, Bookmark } from "lucide-react";
 import DOMPurify from "dompurify";
 import Layout from "@/components/Layout";
@@ -7,101 +9,90 @@ import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { posts, categorias } from "@/data/mockData";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Post } from "@/types/blog";
 
 const PostPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   
-  const post = posts.find(p => p.slug === slug);
-  const categoria = post ? categorias.find(cat => cat.id === post.categoria_id) : undefined;
+  const { data: post, isLoading, isError } = useQuery({
+    queryKey: ['post', slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, categorias(nome, slug, cor)')
+        .eq('slug', slug)
+        .eq('status', 'PUBLICADO')
+        .single();
+      if (error) throw error;
+      return data as Post;
+    },
+    enabled: !!slug,
+  });
+
+  const { data: relatedPosts } = useQuery({
+    queryKey: ['relatedPosts', post?.id],
+    queryFn: async () => {
+      if (!post) return [];
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, categorias(nome, slug, cor)')
+        .eq('categoria_id', post.categoria_id)
+        .neq('id', post.id)
+        .eq('status', 'PUBLICADO')
+        .limit(2);
+      if (error) throw error;
+      return data as Post[];
+    },
+    enabled: !!post,
+  });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="max-w-4xl mx-auto">
+          <Skeleton className="h-10 w-1/4 mb-8" />
+          <Skeleton className="h-16 w-full mb-4" />
+          <Skeleton className="h-8 w-3/4 mb-8" />
+          <Skeleton className="h-96 w-full mb-8" />
+          <Skeleton className="h-6 w-full mb-4" />
+          <Skeleton className="h-6 w-full mb-4" />
+          <Skeleton className="h-6 w-5/6 mb-4" />
+        </div>
+      </Layout>
+    );
+  }
   
-  if (!post) {
+  if (isError || !post) {
     return (
       <Layout>
         <div className="text-center py-16">
           <h1 className="text-2xl font-bold mb-4">Artigo não encontrado</h1>
-          <p className="text-muted-foreground mb-6">O artigo que você está procurando não existe.</p>
+          <p className="text-muted-foreground mb-6">O artigo que você está procurando não existe ou não está publicado.</p>
           <Button onClick={() => navigate("/")}>Voltar ao Início</Button>
         </div>
       </Layout>
     );
   }
 
-  const relatedPosts = posts
-    .filter(p => p.id !== post.id && (p.categoria_id === post.categoria_id || 
-            p.tags.some(tag => post.tags.includes(tag))))
-    .slice(0, 2);
-
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long', 
-      year: 'numeric'
+    return new Date(dateStr).toLocaleDateString('pt-BR', {
+      day: '2-digit', month: 'long', year: 'numeric'
     });
-  };
-
-  const seoMetadata = {
-    title: `${post.titulo} | Blog Mente Tech`,
-    description: post.resumo,
-    keywords: post.tags.join(", "),
-    canonical: `https://blogmentetech.com.br/post/${post.slug}`
-  };
-
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": post.titulo,
-    "description": post.resumo,
-    "image": post.imagem_url,
-    "datePublished": post.data_publicacao,
-    "dateModified": post.data_publicacao,
-    "author": {
-      "@type": "Person",
-      "name": post.autor || "Mente Tech"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "Mente Tech",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://blogmentetech.com.br/logo.png"
-      }
-    },
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": `https://blogmentetech.com.br/post/${post.slug}`
-    }
   };
 
   return (
     <Layout>
-      <SEOHead metadata={seoMetadata} structuredData={structuredData} />
+      <SEOHead metadata={{ title: post.titulo, description: post.resumo }} />
       
       <article className="max-w-4xl mx-auto">
-        {/* Navigation */}
-        <div className="mb-8">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(-1)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-        </div>
-
-        {/* Article Header */}
         <header className="mb-8">
-          {categoria && (
-            <Badge 
-              variant="secondary" 
-              className="mb-4" 
-              style={{ backgroundColor: `${categoria.cor}15`, color: categoria.cor }}
-            >
+          {post.categorias && (
+            <Badge variant="secondary" className="mb-4">
               <Tag className="h-3 w-3 mr-1" />
-              {categoria.nome}
+              {post.categorias.nome}
             </Badge>
           )}
           
@@ -120,20 +111,6 @@ const PostPage = () => {
                 <span>{post.tempo_leitura} minutos de leitura</span>
               </div>
             )}
-            <div className="flex items-center space-x-1">
-              <span>Por {post.autor}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3 mb-6">
-            <Button variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
-              Compartilhar
-            </Button>
-            <Button variant="outline" size="sm">
-              <Bookmark className="h-4 w-4 mr-2" />
-              Salvar
-            </Button>
           </div>
 
           <p className="text-lg text-muted-foreground leading-relaxed italic border-l-4 border-primary pl-4">
@@ -141,7 +118,6 @@ const PostPage = () => {
           </p>
         </header>
 
-        {/* Featured Image */}
         {post.imagem_url && (
           <div className="mb-8">
             <img 
@@ -152,70 +128,22 @@ const PostPage = () => {
           </div>
         )}
 
-        {/* Google AdSense Placeholder - In-Article */}
-        <div className="my-8">
-          <Card className="bg-muted/20 border-dashed">
-            <CardContent className="p-6 text-center">
-              <div className="text-muted-foreground">
-                <div className="text-xs uppercase tracking-wide mb-2">Publicidade</div>
-                <div className="text-sm">Google AdSense - In-Article</div>
-                <div className="text-xs">Responsive</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Article Content */}
         <div 
           className="blog-content text-foreground"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.conteudo_html) }}
         />
 
-        {/* Tags */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <h3 className="text-lg font-semibold mb-4">Tags</h3>
-          <div className="flex flex-wrap gap-2">
-            {post.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="hover:bg-primary hover:text-white cursor-pointer transition-colors">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Author Bio */}
-        <Card className="mt-8 bg-gradient-card shadow-card border-0">
-          <CardContent className="p-6">
-            <div className="flex items-start space-x-4">
-              <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-xl">MT</span>
-              </div>
-              <div>
-                <h4 className="font-semibold text-lg mb-2">Mente Tech</h4>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Especialistas em democratizar o acesso à Inteligência Artificial para pequenas e médias empresas brasileiras. 
-                  Nossa missão é traduzir tecnologias complexas em soluções práticas e acessíveis.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Related Posts */}
-        {relatedPosts.length > 0 && (
+        {relatedPosts && relatedPosts.length > 0 && (
           <section className="mt-12">
             <h3 className="text-2xl font-bold mb-6">Artigos Relacionados</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {relatedPosts.map((relatedPost) => {
-                const relatedCategoria = categorias.find(cat => cat.id === relatedPost.categoria_id);
-                return (
-                  <PostCard 
-                    key={relatedPost.id} 
-                    post={relatedPost} 
-                    categoria={relatedCategoria} 
-                  />
-                );
-              })}
+              {relatedPosts.map((relatedPost) => (
+                <PostCard 
+                  key={relatedPost.id} 
+                  post={relatedPost} 
+                  categoria={relatedPost.categorias} 
+                />
+              ))}
             </div>
           </section>
         )}
