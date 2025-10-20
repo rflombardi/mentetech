@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Edit3, Trash2, Search, Calendar, Clock } from "lucide-react";
 import { StatusBadge, statusConfig } from "@/components/admin/StatusSelector";
@@ -31,36 +30,15 @@ import { ptBR } from "date-fns/locale";
 import type { Post, Categoria, PostStatus } from "@/types/blog";
 
 interface PostsListProps {
+  posts: (Post & { categorias?: Categoria })[] | undefined;
+  isLoading: boolean;
   onEditPost: (postId: string) => void;
 }
 
-export function PostsList({ onEditPost }: PostsListProps) {
+export function PostsList({ posts, isLoading, onEditPost }: PostsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | PostStatus>("all");
   const queryClient = useQueryClient();
-
-  // Fetch posts
-  const { data: posts, isLoading: postsLoading } = useQuery({
-    queryKey: ['admin-posts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          categorias (
-            id,
-            nome,
-            slug
-          )
-        `)
-        .order('status', { ascending: true })
-        .order('data_publicacao_agendada', { ascending: true })
-        .order('updated_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as (Post & { categorias: Categoria })[];
-    }
-  });
 
   // Delete post mutation
   const deletePostMutation = useMutation({
@@ -73,7 +51,7 @@ export function PostsList({ onEditPost }: PostsListProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-posts-all'] });
       toast({
         title: "Post excluído",
         description: "O post foi excluído com sucesso.",
@@ -93,15 +71,13 @@ export function PostsList({ onEditPost }: PostsListProps) {
     mutationFn: async ({ postId, status }: { postId: string; status: PostStatus }) => {
       const payload: any = { status };
       
-      // If publishing, set publication date
       if (status === 'PUBLICADO') {
         payload.data_publicacao = new Date().toISOString();
-        payload.publicado = true; // Keep legacy field
+        payload.publicado = true;
       } else {
         payload.publicado = false;
       }
       
-      // If changing from scheduled, clear scheduled date
       if (status !== 'AGENDADO') {
         payload.data_publicacao_agendada = null;
       }
@@ -114,7 +90,7 @@ export function PostsList({ onEditPost }: PostsListProps) {
       if (error) throw error;
     },
     onSuccess: (_, { status }) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-posts-all'] });
       const statusName = statusConfig[status].label.toLowerCase();
       toast({
         title: "Status alterado",
@@ -137,7 +113,7 @@ export function PostsList({ onEditPost }: PostsListProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-posts-all'] });
       toast({
         title: "Posts agendados publicados",
         description: "Posts com data de publicação vencida foram publicados automaticamente.",
@@ -148,26 +124,19 @@ export function PostsList({ onEditPost }: PostsListProps) {
   // Filter posts
   const filteredPosts = posts?.filter(post => {
     const matchesSearch = post.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.resumo.toLowerCase().includes(searchTerm.toLowerCase());
+                         (post.resumo && post.resumo.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || post.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
 
-  // Group posts by status for better organization
-  const groupedPosts = {
-    AGENDADO: filteredPosts?.filter(p => p.status === 'AGENDADO') || [],
-    PUBLICADO: filteredPosts?.filter(p => p.status === 'PUBLICADO') || [],
-    RASCUNHO: filteredPosts?.filter(p => p.status === 'RASCUNHO') || []
-  };
-
   const isScheduledOverdue = (post: Post) => {
     if (post.status !== 'AGENDADO' || !post.data_publicacao_agendada) return false;
     return new Date(post.data_publicacao_agendada) <= new Date();
   };
 
-  if (postsLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
@@ -191,7 +160,7 @@ export function PostsList({ onEditPost }: PostsListProps) {
       {/* Header with auto-publish button */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Gerenciar Posts</h2>
-        {groupedPosts.AGENDADO.some(isScheduledOverdue) && (
+        {posts?.some(isScheduledOverdue) && (
           <Button
             onClick={() => autoPublishMutation.mutate()}
             disabled={autoPublishMutation.isPending}
@@ -225,45 +194,6 @@ export function PostsList({ onEditPost }: PostsListProps) {
             <SelectItem value="RASCUNHO">📝 Rascunhos</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Posts Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <Clock className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Agendados</p>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{groupedPosts.AGENDADO.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30 border-green-200 dark:border-green-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-green-600 dark:text-green-400" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-green-600 dark:text-green-400">Publicados</p>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">{groupedPosts.PUBLICADO.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30 border-gray-200 dark:border-gray-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <Edit3 className="h-8 w-8 text-gray-600 dark:text-gray-400" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Rascunhos</p>
-                <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{groupedPosts.RASCUNHO.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Posts List */}
@@ -316,7 +246,6 @@ export function PostsList({ onEditPost }: PostsListProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    {/* Quick status change buttons */}
                     {post.status === 'RASCUNHO' && (
                       <Button
                         size="sm"

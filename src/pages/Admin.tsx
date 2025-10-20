@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Plus, FileText, Settings, Home, LogOut } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Plus, FileText, Settings, Home, LogOut, BarChart2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,12 +10,26 @@ import { PostsList } from "@/components/admin/PostsList";
 import { PostForm } from "@/components/admin/PostForm";
 import SEOHead from "@/components/SEOHead";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Post } from "@/types/blog";
 
 export default function Admin() {
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("posts");
   const [editingPost, setEditingPost] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  // Fetch all posts for stats and for the list component
+  const { data: posts, isLoading: postsLoading } = useQuery({
+    queryKey: ['admin-posts-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*');
+      
+      if (error) throw error;
+      return data as Post[];
+    }
+  });
 
   const handleCreatePost = () => {
     setEditingPost(null);
@@ -33,6 +49,11 @@ export default function Admin() {
     setActiveTab("posts");
   };
 
+  // Calculate stats
+  const publishedCount = posts?.filter(p => p.status === 'PUBLICADO').length || 0;
+  const draftCount = posts?.filter(p => p.status === 'RASCUNHO').length || 0;
+  const scheduledCount = posts?.filter(p => p.status === 'AGENDADO').length || 0;
+
   return (
     <>
       <SEOHead 
@@ -47,7 +68,7 @@ export default function Admin() {
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-4xl font-bold gradient-text mb-2">
                   Painel Administrativo
@@ -85,9 +106,9 @@ export default function Admin() {
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">--</div>
+                <div className="text-2xl font-bold">{postsLoading ? '...' : publishedCount}</div>
                 <p className="text-xs text-muted-foreground">
-                  Carregando estatísticas...
+                  Visíveis para o público
                 </p>
               </CardContent>
             </Card>
@@ -98,7 +119,7 @@ export default function Admin() {
                 <Settings className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">--</div>
+                <div className="text-2xl font-bold">{postsLoading ? '...' : draftCount}</div>
                 <p className="text-xs text-muted-foreground">
                   Posts não publicados
                 </p>
@@ -107,13 +128,13 @@ export default function Admin() {
             
             <Card className="card-hover">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Visualizações</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Agendados</CardTitle>
+                <BarChart2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">--</div>
+                <div className="text-2xl font-bold">{postsLoading ? '...' : scheduledCount}</div>
                 <p className="text-xs text-muted-foreground">
-                  Total de visualizações
+                  Para publicação futura
                 </p>
               </CardContent>
             </Card>
@@ -130,7 +151,11 @@ export default function Admin() {
               </TabsList>
               
               <TabsContent value="posts" className="mt-6">
-                <PostsList onEditPost={handleEditPost} />
+                <PostsList 
+                  posts={posts}
+                  isLoading={postsLoading}
+                  onEditPost={handleEditPost} 
+                />
               </TabsContent>
               
               <TabsContent value="form" className="mt-6">
