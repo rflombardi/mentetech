@@ -156,7 +156,7 @@ const Footer = ({ categorias }: FooterProps) => {
           <div className="text-center space-y-4">
             <h4 className="text-lg font-semibold">Fique por dentro das novidades</h4>
             <p className="text-white/80 text-sm max-w-md mx-auto">
-              Receba conteúdo exclusivo sobre IA para PMEs direto no seu e-mail
+              Receba conteúdo exclusivo sobre IA para PMEs direto no seu <span className="whitespace-nowrap">e-mail</span>
             </p>
             <Button 
               onClick={openModal}
