@@ -23,6 +23,8 @@ import { z } from "zod";
 import { StatusSelector } from "@/components/admin/StatusSelector";
 import { DateTimePicker } from "@/components/admin/DateTimePicker";
 import type { Post, Categoria, PostStatus } from "@/types/blog";
+import { marked } from '@markedjs/marked'; // Importar marked
+import DOMPurify from "dompurify"; // Importar DOMPurify para sanitização
 
 const postSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório").max(200, "Título muito longo"),
@@ -130,7 +132,7 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
       setFormData({
         titulo: post.titulo,
         resumo: post.resumo,
-        conteudo_html: post.conteudo_html,
+        conteudo_html: post.conteudo_html, // Keep as HTML from DB
         categoria_id: post.categoria_id || undefined,
         tags: post.tags || [],
         imagem_url: post.imagem_url || "",
@@ -166,10 +168,13 @@ export function PostForm({ postId, onSuccess, onCancel }: PostFormProps) {
   // Save post mutation
   const savePostMutation = useMutation({
     mutationFn: async (data: PostFormData) => {
+      // Convert Markdown to HTML and sanitize before saving
+      const parsedHtml = data.conteudo_html ? DOMPurify.sanitize(marked.parse(data.conteudo_html) as string) : "";
+
       const payload = {
         titulo: data.titulo,
         resumo: data.resumo || "",
-        conteudo_html: data.conteudo_html || "",
+        conteudo_html: parsedHtml, // Save the converted HTML
         categoria_id: data.categoria_id || null,
         tags: data.tags,
         imagem_url: data.imagem_url || null,
