@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye } from "lucide-react";
 import DOMPurify from "dompurify";
-import { marked } from '@markedjs/marked'; // Importar marked
+import { marked } from 'marked'; // Importar marked (nome correto do pacote)
 
 interface ContentPreviewProps {
   content: string;

@@ -23,7 +23,7 @@ import { z } from "zod";
 import { StatusSelector } from "@/components/admin/StatusSelector";
 import { DateTimePicker } from "@/components/admin/DateTimePicker";
 import type { Post, Categoria, PostStatus } from "@/types/blog";
-import { marked } from '@markedjs/marked'; // Importar marked
+import { marked } from 'marked'; // Importar marked (nome correto do pacote)
 import DOMPurify from "dompurify"; // Importar DOMPurify para sanitização
 
 const postSchema = z.object({
