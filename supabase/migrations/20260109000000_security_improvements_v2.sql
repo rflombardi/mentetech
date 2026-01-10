@@ -104,17 +104,3 @@ ON public.categorias
 FOR DELETE
 TO authenticated
 USING (has_role(auth.uid(), 'admin'::app_role));
-
--- ============================================================================
--- 4. ADD SECURITY COMMENTS
--- ============================================================================
-
-COMMENT ON POLICY "Only admins can upload blog images" ON storage.objects IS
-  'Security: Only admin users can upload images to prevent unauthorized content';
-
-COMMENT ON POLICY "Only admins can create posts" ON public.posts IS
-  'Security: Only admin users can create posts to prevent unauthorized content';
-
-COMMENT ON TABLE public.posts IS 'Blog posts table. Public read access for published posts only. All modifications restricted to admins.';
-
-COMMENT ON TABLE public.categorias IS 'Blog categories table. Public read access. All modifications restricted to admins.';

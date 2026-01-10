@@ -5,10 +5,13 @@
 -- 1. FIX STORAGE POLICIES - Restrict to admins only
 -- ============================================================================
 
--- Drop overly permissive storage policies
+-- Drop ALL existing storage policies for blog-images
 DROP POLICY IF EXISTS "Authenticated users can upload blog images" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated users can update blog images" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated users can delete blog images" ON storage.objects;
+DROP POLICY IF EXISTS "Only admins can upload blog images" ON storage.objects;
+DROP POLICY IF EXISTS "Only admins can update blog images" ON storage.objects;
+DROP POLICY IF EXISTS "Only admins can delete blog images" ON storage.objects;
 
 -- Create admin-only storage policies
 CREATE POLICY "Only admins can upload blog images"
@@ -46,10 +49,13 @@ USING (
 -- 2. FIX POSTS POLICIES - Restrict to admins only
 -- ============================================================================
 
--- Drop overly permissive posts policies
+-- Drop ALL existing posts policies
 DROP POLICY IF EXISTS "Authenticated users can create posts" ON public.posts;
 DROP POLICY IF EXISTS "Authenticated users can update posts" ON public.posts;
 DROP POLICY IF EXISTS "Authenticated users can delete posts" ON public.posts;
+DROP POLICY IF EXISTS "Only admins can create posts" ON public.posts;
+DROP POLICY IF EXISTS "Only admins can update posts" ON public.posts;
+DROP POLICY IF EXISTS "Only admins can delete posts" ON public.posts;
 
 -- Create admin-only posts policies
 CREATE POLICY "Only admins can create posts"
@@ -75,9 +81,13 @@ USING (has_role(auth.uid(), 'admin'::app_role));
 -- 3. FIX CATEGORIAS POLICIES - Restrict modifications to admins only
 -- ============================================================================
 
--- Drop existing public read policy (if exists)
+-- Drop ALL existing categorias policies
 DROP POLICY IF EXISTS "Categorias são visíveis publicamente" ON public.categorias;
 DROP POLICY IF EXISTS "Anyone can read categorias" ON public.categorias;
+DROP POLICY IF EXISTS "Public can read categorias" ON public.categorias;
+DROP POLICY IF EXISTS "Only admins can create categorias" ON public.categorias;
+DROP POLICY IF EXISTS "Only admins can update categorias" ON public.categorias;
+DROP POLICY IF EXISTS "Only admins can delete categorias" ON public.categorias;
 
 -- Recreate public read policy
 CREATE POLICY "Public can read categorias"
@@ -104,17 +114,3 @@ ON public.categorias
 FOR DELETE
 TO authenticated
 USING (has_role(auth.uid(), 'admin'::app_role));
-
--- ============================================================================
--- 4. ADD SECURITY COMMENTS
--- ============================================================================
-
-COMMENT ON POLICY "Only admins can upload blog images" ON storage.objects IS
-  'Security: Only admin users can upload images to prevent unauthorized content';
-
-COMMENT ON POLICY "Only admins can create posts" ON public.posts IS
-  'Security: Only admin users can create posts to prevent unauthorized content';
-
-COMMENT ON TABLE public.posts IS 'Blog posts table. Public read access for published posts only. All modifications restricted to admins.';
-
-COMMENT ON TABLE public.categorias IS 'Blog categories table. Public read access. All modifications restricted to admins.';
