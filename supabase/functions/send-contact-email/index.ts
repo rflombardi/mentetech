@@ -1,11 +1,27 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// SECURITY: Restrict CORS to your specific domain
+// For local development, you may need to add "http://localhost:3000" to allowed origins
+const ALLOWED_ORIGINS = [
+  "https://mentetech.com.br",
+  "https://www.mentetech.com.br",
+  "http://localhost:3000", // For local development
+  "http://localhost:5173", // For Vite dev server
+];
+
+function getCorsHeaders(origin: string | null): HeadersInit {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : ALLOWED_ORIGINS[0];
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 // Input validation schema
 const contactSchema = z.object({
@@ -47,7 +63,35 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => htmlEscapeMap[char] || char);
 }
 
+// Helper function to fetch with timeout
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = 10000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -101,28 +145,32 @@ const handler = async (req: Request): Promise<Response> => {
     const safeSubject = escapeHtml(subject);
     const safeMessage = escapeHtml(message);
 
-    // Send email to the site owner
-    const ownerEmailResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
+    // Send email to the site owner with timeout
+    const ownerEmailResponse = await fetchWithTimeout(
+      'https://api.resend.com/emails',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: "Mente Tech <noreply@mentetech.com.br>",
+          to: [contactEmail],
+          subject: `Nova Mensagem de Contato: ${safeSubject}`,
+          html: `
+            <h2>Nova Mensagem de Contato</h2>
+            <p><strong>Nome:</strong> ${safeName}</p>
+            <p><strong>Email:</strong> ${safeEmail}</p>
+            ${safePhone ? `<p><strong>Telefone:</strong> ${safePhone}</p>` : ''}
+            <p><strong>Assunto:</strong> ${safeSubject}</p>
+            <p><strong>Mensagem:</strong></p>
+            <p>${safeMessage.replace(/\n/g, '<br>')}</p>
+          `,
+        }),
       },
-      body: JSON.stringify({
-        from: "Mente Tech <noreply@mentetech.com.br>",
-        to: [contactEmail],
-        subject: `Nova Mensagem de Contato: ${safeSubject}`,
-        html: `
-          <h2>Nova Mensagem de Contato</h2>
-          <p><strong>Nome:</strong> ${safeName}</p>
-          <p><strong>Email:</strong> ${safeEmail}</p>
-          ${safePhone ? `<p><strong>Telefone:</strong> ${safePhone}</p>` : ''}
-          <p><strong>Assunto:</strong> ${safeSubject}</p>
-          <p><strong>Mensagem:</strong></p>
-          <p>${safeMessage.replace(/\n/g, '<br>')}</p>
-        `,
-      }),
-    });
+      10000 // 10 second timeout
+    );
 
     const ownerEmailData = await ownerEmailResponse.json();
     
@@ -133,28 +181,32 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Owner email sent successfully:", ownerEmailData.id);
 
-    // Send confirmation email to the user
-    const userEmailResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
+    // Send confirmation email to the user with timeout
+    const userEmailResponse = await fetchWithTimeout(
+      'https://api.resend.com/emails',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: "Mente Tech <noreply@mentetech.com.br>",
+          to: [email],
+          subject: "Recebemos sua mensagem!",
+          html: `
+            <h1>Obrigado por entrar em contato, ${safeName}!</h1>
+            <p>Recebemos sua mensagem e retornaremos em breve.</p>
+            <p><strong>Assunto:</strong> ${safeSubject}</p>
+            <p><strong>Sua mensagem:</strong></p>
+            <p>${safeMessage.replace(/\n/g, '<br>')}</p>
+            <br>
+            <p>Atenciosamente,<br>Equipe Mente Tech</p>
+          `,
+        }),
       },
-      body: JSON.stringify({
-        from: "Mente Tech <noreply@mentetech.com.br>",
-        to: [email],
-        subject: "Recebemos sua mensagem!",
-        html: `
-          <h1>Obrigado por entrar em contato, ${safeName}!</h1>
-          <p>Recebemos sua mensagem e retornaremos em breve.</p>
-          <p><strong>Assunto:</strong> ${safeSubject}</p>
-          <p><strong>Sua mensagem:</strong></p>
-          <p>${safeMessage.replace(/\n/g, '<br>')}</p>
-          <br>
-          <p>Atenciosamente,<br>Equipe Mente Tech</p>
-        `,
-      }),
-    });
+      10000 // 10 second timeout
+    );
 
     const userEmailData = await userEmailResponse.json();
     

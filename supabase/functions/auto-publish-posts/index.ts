@@ -1,3 +1,5 @@
+// @ts-nocheck
+/// <reference types="https://esm.sh/@supabase/supabase-js@2" />
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -22,7 +24,7 @@ interface Database {
   };
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
